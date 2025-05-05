@@ -13,6 +13,7 @@ from marsoom import guizmo
 from waynon.components.robot import Franka
 from waynon.components.transform import Transform
 from waynon.components.renderable import (
+    CharucoDrawable,
     Mesh,
     ImageQuad,
     CameraWireframe,
@@ -114,6 +115,12 @@ class Viewer3DViewModel:
             Transform, ArucoDrawable
         ):
             drawable.draw()
+
+        for entity, (transform, drawable) in esper.get_components(
+            Transform, CharucoDrawable
+        ):
+            drawable.draw()
+
         for entity, (transform, drawable) in esper.get_components(
             Transform, CameraWireframe
         ):
