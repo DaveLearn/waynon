@@ -74,6 +74,21 @@ def create_realsense_camera(parent_id: int, name: str = None):
         StructuredPointCloud()
     )
 
+def create_pinhole_camera(parent_id: int, name: str | None = None):
+    if name is None:
+        name = f"Pinhole_Camera_{count(PinholeCamera)}"
+
+    return create_entity(
+        name,
+        parent_id,
+        Transform(),
+        PinholeCamera(),
+        Deletable(),
+        Draggable(type="transform"),
+        Nestable(type="transform", target=False),
+        CameraWireframe(),
+        Optimizable(),
+    )
 
 def create_aruco_marker(parent_id: int, marker: ArucoMarker = None, name: str = None):
     if name is None:

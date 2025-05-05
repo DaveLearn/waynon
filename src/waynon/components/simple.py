@@ -22,12 +22,15 @@ class World(Component):
         from waynon.components.scene_utils import (create_aruco_marker,
                                                    create_realsense_camera,
                                                    create_robot,
-                                                   create_charuco_board)
+                                                   create_charuco_board, 
+                                                   create_pinhole_camera)
 
         if imgui.menu_item_simple(f"{ICON_FA_ROBOT} Add Franka Robot"):
             create_robot(entity_id)
         if imgui.menu_item_simple(f"{ICON_FA_CAMERA} Add Realsense Camera"):
             create_realsense_camera(entity_id)
+        if imgui.menu_item_simple(f"{ICON_FA_CAMERA} Add Pinhole Camera"):
+            create_pinhole_camera(entity_id)
         if imgui.menu_item_simple(f"{ICON_FA_MARKER} Add Aruco Marker"):
             create_aruco_marker(entity_id)
         if imgui.menu_item_simple(f"{ICON_FA_CHESS_BOARD} Add Charuco Board"):

@@ -133,9 +133,31 @@ class PinholeCamera(Component):
 
     def draw_property(self, nursery, e: int):
         imgui.separator_text("Pinhole Camera")
-        imgui.label_text("Resolution", f"{self.width}x{self.height}")
-        imgui.label_text("Focal", f"{self.fl_x}, {self.fl_y}")
-        imgui.label_text("Principal", f"{self.cx}, {self.cy}")
+        _, self.width = imgui.input_int("Width", self.width)
+        _, self.height = imgui.input_int("Height", self.height)
+        _, self.fl_x = imgui.input_float("Focal X", self.fl_x)
+        _, self.fl_y = imgui.input_float("Focal Y", self.fl_y)
+        _, self.cx = imgui.input_float("Principal X", self.cx)
+        _, self.cy = imgui.input_float("Principal Y", self.cy)
+
+        imgui.spacing()
+
+        width = imgui.get_content_region_avail().x
+        max_width = 250
+        width = min(width, max_width)
+        if self._texture.id is not None:
+            imgui.image(self._texture.id, (width, width * (float(self.height) / float(self.width))))
+        if imgui.button("Select Image"):
+            from tkinter import Tk
+            from tkinter.filedialog import askopenfilename
+            Tk().withdraw()
+            path = askopenfilename()
+            if path:
+                import cv2
+                self._image_u = cv2.imread(path)
+                self.width = self._image_u.shape[1]
+                self.height = self._image_u.shape[0]
+                self.update_image(self._image_u)
 
         imgui.spacing()
 
@@ -156,6 +178,9 @@ class PinholeCamera(Component):
                     self.guess_position(e, marker_entity_id, self._guessing_camera)
                 imgui.same_line()
             imgui.new_line()
+
+
+            
 
     def on_selected(self, nursery, entity_id, just_selected):
         if just_selected:
