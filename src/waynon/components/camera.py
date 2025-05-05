@@ -7,7 +7,6 @@ import numpy as np
 from imgui_bundle import imgui
 from pyglet import gl
 
-from waynon.components.aruco_detector import ArucoDetector
 from waynon.components.aruco_marker import ArucoMarker
 from waynon.components.simple import Component
 from waynon.components.transform import Transform

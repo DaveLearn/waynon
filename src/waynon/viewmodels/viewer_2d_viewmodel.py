@@ -1,6 +1,7 @@
 # Copyright (c) 2025 Boston Dynamics AI Institute LLC. All rights reserved.
 
 from pathlib import Path
+from typing import List, Tuple, cast
 
 import esper
 import marsoom
@@ -13,6 +14,8 @@ import pyglet
 
 from waynon.components.aruco_marker import ArucoMarker
 from waynon.components.aruco_measurement import ArucoMeasurement
+from waynon.components.charuco_board import CharucoBoard
+from waynon.components.charuco_board_measurement import CharucoBoardMeasurement
 from waynon.components.camera import PinholeCamera
 from waynon.components.image_measurement import ImageMeasurement
 from waynon.components.measurement import Measurement
@@ -70,9 +73,7 @@ class Viewer2DViewModel:
         if not esper.has_component(self.current_entity_id, ImageMeasurement):
             return
 
-        image_measurement = esper.component_for_entity(
-            self.current_entity_id, ImageMeasurement
-        )
+
         aruco_measurement_ids = find_children_with_component(
             self.current_entity_id, ArucoMeasurement
         )
@@ -101,6 +102,45 @@ class Viewer2DViewModel:
             marker = esper.try_component(marker_entity_id, ArucoMarker)
 
             p_MF = marker.get_P_MC()
+            p_CF = X_CM[:3, :3] @ p_MF.T + X_CM[:3, 3:]
+            projected_CF = camera.K() @ p_CF  # (N, 3)
+            projected_CF = projected_CF[:2, :] / projected_CF[2:, :]
+
+            for i, corner in enumerate(projected_CF.T):
+                v.circle(corner, color=(0, 0, 1, 1), thickness=4)
+
+        # charuco board measurements
+        charuco_measurement_ids = find_children_with_component(
+            self.current_entity_id, CharucoBoardMeasurement
+        )
+        v = self.viewer_2d
+        for charuco_measurement_id in charuco_measurement_ids:
+            charuco_measurement = esper.component_for_entity(
+                charuco_measurement_id, CharucoBoardMeasurement
+            )
+            pixels = cast(List[Tuple[float,float]], charuco_measurement.corner_pixels)
+            v.polyline([*pixels, pixels[0]], color=(1, 0, 0, 1), thickness=2)
+            for i, corner in enumerate(pixels):
+                if v.circle(corner, color=(0, 1, 0, 1), thickness=1):
+                    if imgui.is_mouse_down(0):
+                        new_pos = v.get_mouse_position()
+                        charuco_measurement.corner_pixels[i][0] = float(new_pos[0])
+                        charuco_measurement.corner_pixels[i][1] = float(new_pos[1])
+
+            marker_entity_id = charuco_measurement.board_entity_id
+            camera_entity_id = charuco_measurement.camera_entity_id
+
+            camera = esper.try_component(camera_entity_id, PinholeCamera)
+            X_MC = get_relative_transform_X_TS(
+                source_entity=camera_entity_id, target_entity=marker_entity_id
+            )
+            X_MC = rotate_around_x(X_MC)  # convert to opencv
+            X_CM = np.linalg.inv(X_MC)
+            board = esper.try_component(marker_entity_id, CharucoBoard)
+            if board is None:
+                continue
+
+            p_MF = board.get_P_MC()
             p_CF = X_CM[:3, :3] @ p_MF.T + X_CM[:3, 3:]
             projected_CF = camera.K() @ p_CF  # (N, 3)
             projected_CF = projected_CF[:2, :] / projected_CF[2:, :]

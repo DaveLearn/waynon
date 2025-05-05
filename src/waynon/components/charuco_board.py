@@ -15,7 +15,8 @@ class CharucoBoard(Component):
     rows: int = 5
 
     def get_board(self):
-        aruco_dict = aruco.getPredefinedDictionary(self.marker_dict)[self.marker_id_offset:]
+        aruco_dict = aruco.getPredefinedDictionary(self.marker_dict)
+        aruco_dict.bytesList = aruco_dict.bytesList[self.marker_id_offset:]
         return aruco.CharucoBoard((self.cols, self.rows), self.square_length, self.marker_length, aruco_dict)
 
     def get_texture(self):
@@ -28,7 +29,8 @@ class CharucoBoard(Component):
         width = imgui.get_content_region_avail().x
         max_width = 200
         width = min(width, max_width)
-        imgui.image(t.id, (width, width * (float(self.rows) / self.cols)))
+        if t.id is not None:
+            imgui.image(t.id, (width, width * (float(self.rows) / self.cols)))
         imgui.spacing()
         
         current_item = aruco_dict_values.index(self.marker_dict)

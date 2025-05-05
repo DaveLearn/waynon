@@ -9,11 +9,13 @@ import numpy as np
 from anytree import RenderTree
 from scipy.spatial.transform import Rotation as R
 
+from .charuco_board_detector import CharucoBoardDetector
+
 from .charuco_board import CharucoBoard
 
 from .aruco_detector import ArucoDetector
 from .aruco_marker import ArucoMarker
-from .aruco_measurement import ArucoMeasurement
+
 from .camera import DepthCamera, PinholeCamera
 from .collector import CollectorData, DataNode, MeasurementGroup, Solvers
 from .component import Component
@@ -129,6 +131,7 @@ def create_collector(parent_id: int):
     create_entity("Factor Graph", s_id, FactorGraph())
     d_id, _ = create_entity("Detectors", id, Detectors())
     create_aruco_detector("Aruco Detector", d_id)
+    create_charuco_board_detector("Charuco Board Detector", d_id)
     return id, node
 
 
@@ -449,5 +452,8 @@ def export_calibration(path: Path):
     
     with open(path, "w") as f:
         f.write(json.dumps(res, indent=4))
+
+def create_charuco_board_detector(name: str, parent_id: int):
+    return create_entity(name, parent_id, CharucoBoardDetector(), Deletable())
 
 DATA_PATH = None

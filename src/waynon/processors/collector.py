@@ -18,7 +18,6 @@ from waynon.components.collector import CollectorData, MeasurementGroup, DataNod
 from waynon.components.measurement import Measurement
 from waynon.components.image_measurement import ImageMeasurement
 from waynon.components.joint_measurement import JointMeasurement
-from waynon.components.aruco_measurement import ArucoMeasurement
 from waynon.components.transform import Transform
 from waynon.solvers.factor_graph import *
 
