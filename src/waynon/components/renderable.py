@@ -23,6 +23,7 @@ from .measurement import Measurement
 from .transform import Transform
 
 from waynon.utils.aruco_textures import ARUCO_TEXTURES
+from waynon.utils.charuco_textures import CHARUCO_TEXTURES
 from waynon.utils.utils import COLORS
 
 
@@ -157,6 +158,99 @@ class ArucoDrawable(Component, Drawable):
     
     def draw(self):
         self._batch.draw()
+
+class CharucoDrawable(Component, Drawable):
+    marker_length: float = 0.0375
+    square_length: float = 0.05
+    aruco_dict: int = 1
+    aruco_id_offset: int = 0
+    cols: int = 4
+    rows: int = 5
+
+    def model_post_init(self, __context):
+        board_width = float(self.cols) * self.square_length
+        board_height = float(self.rows) * self.square_length
+
+        top_left = (-board_width / 2, board_height / 2, 0)
+        top_right = (board_width / 2, board_height / 2, 0)
+        bot_right = (board_width / 2, -board_height / 2, 0)
+        bot_left = (-board_width / 2, -board_height / 2, 0)
+
+        self._batch = pyglet.graphics.Batch()
+        self._texture_id = CHARUCO_TEXTURES.get_texture(
+            aruco_dict=self.aruco_dict, 
+            aruco_id_offset=self.aruco_id_offset, 
+            cols=self.cols, 
+            rows=self.rows, 
+            square_length=self.square_length, 
+            marker_length=self.marker_length
+            ).id
+        
+        self._model = marsoom.image_quad.ImageQuad(
+            self._texture_id,
+            top_left,
+            top_right,
+            bot_right,
+            bot_left,
+            batch=self._batch
+        )
+
+    def _update_model(self):
+        board_width = float(self.cols) * self.square_length
+        board_height = float(self.rows) * self.square_length
+
+        top_left = (-board_width / 2, board_height / 2, 0)
+        top_right = (board_width / 2, board_height / 2, 0)
+        bot_right = (board_width / 2, -board_height / 2, 0)
+        bot_left = (-board_width / 2, -board_height / 2, 0)
+
+        self._texture_id = CHARUCO_TEXTURES.get_texture(
+            aruco_dict=self.aruco_dict, 
+            aruco_id_offset=self.aruco_id_offset, 
+            cols=self.cols, 
+            rows=self.rows, 
+            square_length=self.square_length, 
+            marker_length=self.marker_length
+            ).id
+        
+        self._model.tex_id = self._texture_id
+        self._model.update(
+            top_left=top_left,
+            top_right=top_right,
+            bot_right=bot_right,
+            bot_left=bot_left
+        )
+
+    def update_params(self, marker_length: float = None, square_length: float = None, marker_dict: int = None, marker_id_offset: int = None, cols: int = None, rows: int = None):
+        changed = False
+        if marker_length is not None and self.marker_length != marker_length:
+            self.marker_length = marker_length
+            changed = True
+        if square_length is not None and self.square_length != square_length:
+            self.square_length = square_length
+            changed = True
+        if marker_dict is not None and self.aruco_dict != marker_dict:
+            self.aruco_dict = marker_dict
+            changed = True
+        if marker_id_offset is not None and self.aruco_id_offset != marker_id_offset:
+            self.aruco_id_offset = marker_id_offset
+            changed = True
+        if cols is not None and self.cols != cols:
+            self.cols = cols
+            changed = True
+        if rows is not None and self.rows != rows:
+            self.rows = rows
+            changed = True
+
+        if changed:
+            self._update_model()
+
+    def set_X_WT(self, X_WT: np.ndarray):
+        self._model.matrix = pyglet.math.Mat4(X_WT.T.flatten().tolist())
+    
+    def draw(self):
+        self._batch.draw()
+            
 
 
 def get_single_marker_points(marker_size: float) -> np.ndarray:

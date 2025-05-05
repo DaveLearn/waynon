@@ -9,6 +9,8 @@ import numpy as np
 from anytree import RenderTree
 from scipy.spatial.transform import Rotation as R
 
+from .charuco_board import CharucoBoard
+
 from .aruco_detector import ArucoDetector
 from .aruco_marker import ArucoMarker
 from .aruco_measurement import ArucoMeasurement
@@ -23,7 +25,7 @@ from .node import Node
 from .optimizable import Optimizable
 from .pose_group import PoseGroup
 from .realsense_camera import RealsenseCamera
-from .renderable import ArucoDrawable, CameraWireframe, ImageQuad, Mesh, StructuredPointCloud
+from .renderable import ArucoDrawable, CameraWireframe, ImageQuad, Mesh, StructuredPointCloud, CharucoDrawable
 from .robot import Franka, FrankaLink, FrankaLinks, Robot
 from .simple import (
     Deletable,
@@ -94,6 +96,31 @@ def create_aruco_marker(parent_id: int, marker: ArucoMarker = None, name: str = 
         Optimizable(),
     )
 
+def create_charuco_board(parent_id: int, board: CharucoBoard = None, name: str = None):
+    if name is None:
+        name = default_name(CharucoBoard)
+
+    if board is None:
+        board = CharucoBoard()
+
+    return create_entity(
+        name,
+        parent_id,
+        board,
+        Transform(),
+        Deletable(),
+        Draggable(type="transform"),
+        Nestable(type="transform", target=False),
+        CharucoDrawable(
+            marker_length=board.marker_length,
+            square_length=board.square_length, 
+            aruco_dict=board.marker_dict,
+            aruco_id_offset=board.marker_id_offset,
+            cols=board.cols,
+            rows=board.rows
+        ),
+        Optimizable(),
+    )
 
 def create_collector(parent_id: int):
     id, node = create_entity("Collector", parent_id, CollectorData())

@@ -5,9 +5,11 @@ import esper
 import pyglet
 
 from waynon.components.transform import Transform
-from waynon.components.renderable import Mesh, ImageQuad, CameraWireframe, ArucoDrawable, StructuredPointCloud
+from waynon.components.renderable import Mesh, ImageQuad, CameraWireframe, ArucoDrawable, StructuredPointCloud, CharucoDrawable
 from waynon.components.camera import PinholeCamera
 from waynon.components.aruco_marker import ArucoMarker
+from waynon.components.charuco_board import CharucoBoard
+
 class RenderProcessor(esper.Processor):
 
     def process(self):        
@@ -37,3 +39,18 @@ class RenderProcessor(esper.Processor):
             drawable.set_marker_id(marker.id)
             matrix = transform.get_X_WT()
             drawable.set_X_WT(matrix)
+
+        for entity, (transform, board, drawable) in esper.get_components(Transform, CharucoBoard, CharucoDrawable):
+            drawable.update_params(
+                marker_length=board.marker_length,
+                square_length=board.square_length,
+                marker_dict=board.marker_dict,
+                marker_id_offset=board.marker_id_offset,
+                cols=board.cols,
+                rows=board.rows
+            )
+            matrix = transform.get_X_WT()
+            drawable.set_X_WT(matrix)
+            
+
+        
