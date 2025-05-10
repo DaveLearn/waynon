@@ -2,6 +2,7 @@
 
 import json
 from pathlib import Path
+import traceback
 from typing import Callable, Type
 
 import esper
@@ -22,6 +23,7 @@ from .component import Component
 from .factor_graph import FactorGraph
 from .image_measurement import ImageMeasurement
 from .joint_measurement import JointMeasurement
+from .charuco_board_measurement import CharucoBoardMeasurement
 from .measurement import Measurement
 from .node import Node
 from .optimizable import Optimizable
@@ -37,6 +39,7 @@ from .simple import (
     Nestable,
     OptimizedPose,
     Pose,
+    RobotPose,
     PoseFolder,
     Root,
     Selected,
@@ -201,19 +204,32 @@ def create_robot(parent_id: int = None, name: str = None):
     return rd, node
 
 
-def create_posegroup(parent_id: int, name: str = None):
+def create_posegroup(name: str = None):
     if name is None:
         name = default_name(PoseGroup)
+    
+    # Find or create the PoseGroups root node
+    world_id = get_world_id()
+    pose_groups_id = None
+    for child in esper.component_for_entity(world_id, Node).children:
+        if child.name == "PoseGroups":
+            pose_groups_id = child.entity_id
+            break
+    
+    if pose_groups_id is None:
+        pose_groups_id, _ = create_entity("PoseGroups", world_id, Node())
+    
     return create_entity(
-        name, parent_id, PoseGroup(), Draggable(type="posegroup"), Deletable()
+        name, pose_groups_id, PoseGroup(), Draggable(type="posegroup"), Deletable()
     )
 
 
-def create_motion(parent_id: int, q, name: str = None):
+def create_motion(pose_id: int, q, robot_id: int, name: str = None):
     if name is None:
-        name = default_name(Pose)
+        name = default_name(RobotPose)
+    
     return create_entity(
-        name, parent_id, Pose(q=q), Draggable(type="pose"), Deletable()
+        name, pose_id, RobotPose(q=q, robot_id=robot_id), Draggable(type="pose"), Deletable()
     )
 
 
@@ -224,7 +240,7 @@ def create_frame(name: str, parent_id: int, modifiable=True):
 def create_measurement(name: str, parent_id: int, *measurements: Component):
     id, node = create_entity(name, parent_id, Measurement(), Deletable())
     for measurement in measurements:
-        create_entity(measurement.default_name(), id, measurement)
+        create_entity(measurement.derive_name() if hasattr(measurement, "derive_name") else measurement.default_name(), id, measurement) # type: ignore
     return id, node
 
 
@@ -365,6 +381,8 @@ def load_scene(path: Path):
         esper.clear_cache()
         create_empty_scene()
         print(e)
+        stacktrace = traceback.format_exc()
+        print(stacktrace)
         print("Failed to load scene")
 
 

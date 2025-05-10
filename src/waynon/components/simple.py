@@ -7,7 +7,7 @@ from imgui_bundle import imgui
 from imgui_bundle.immapp.icons_fontawesome_6 import *
 
 from waynon.components.component import Component
-from waynon.components.tree_utils import find_nearest_ancestor_with_component
+from waynon.components.tree_utils import find_nearest_ancestor_with_component, find_children_with_component
 from waynon.detectors.measurement_processor import MeasurementProcessor
 from waynon.utils.draw_utils import draw_robot
 from waynon.utils.utils import COLORS
@@ -59,49 +59,92 @@ class PoseFolder(Component):
         from waynon.components.scene_utils import create_posegroup
 
         if imgui.menu_item_simple(f"{ICON_FA_PLUS} Add Pose Group"):
-            create_posegroup(entity_id)
+            create_posegroup()
 
 
 class Pose(Component):
+    """A simple node component that can be used as a parent for RobotPoses."""
+    
+    async def move_to_pose(self, nursery, entity_id):
+        """Move all robots to this pose."""
+        robot_pose_ids = find_children_with_component(entity_id, RobotPose)
+        for robot_pose_id in robot_pose_ids:
+            robot_pose = esper.component_for_entity(robot_pose_id, RobotPose)
+            if robot_pose and robot_pose.robot_id is not None:
+                await robot_pose.move_robot(nursery)
+    
+    
+    def draw_property(self, nursery, e):
+        imgui.separator_text("Pose")
+        robot_pose_ids = find_children_with_component(e, RobotPose)
+        
+        # Only enable the button if all robots are ready to move
+        all_ready = True
+        for robot_pose_id in robot_pose_ids:
+            robot_pose = esper.component_for_entity(robot_pose_id, RobotPose)
+            if robot_pose and robot_pose.robot_id is not None:
+                robot = robot_pose.get_robot(robot_pose_id)
+                if robot is None or not robot.ready_to_move():
+                    all_ready = False
+                    break
+        
+        imgui.begin_disabled(not all_ready)
+        imgui.push_style_color(imgui.Col_.button, COLORS["BLUE"])
+        if imgui.button("Move To Pose", (imgui.get_content_region_avail().x, 40)):
+            nursery.start_soon(self.move_to_pose, nursery, e)
+        if not all_ready:
+            imgui.set_item_tooltip("One or more robots are not ready to move")
+        imgui.pop_style_color()
+        imgui.end_disabled()
+
+
+class RobotPose(Component):
     q: list[float] = [0.0, -0.783, 0.0, -2.362, 0.0, 1.573, 0.776]
+    robot_id: int = None
 
     def get_robot(self, entity_id):
         from waynon.components.robot import Robot
 
-        robot_id = find_nearest_ancestor_with_component(entity_id, Robot)
-        if robot_id is None:
+        if self.robot_id is None:
             print("No robot found")
             return None
-        return esper.component_for_entity(robot_id, Robot).get_manager()
+        return esper.component_for_entity(self.robot_id, Robot).get_manager()
+    
+    async def move_robot(self, nursery):
+        """Move the robot to this pose."""
+        robot = self.get_robot(None)  # We don't need entity_id since we have robot_id
+        if robot is None:
+            print(f"No robot found for robot_id {self.robot_id}")
+            return
+        
+        if not robot.ready_to_move():
+            print(f"Robot {self.robot_id} is not ready to move")
+            return
+            
+        await robot.move_to(self.q)
 
     def draw_context(self, nursery, entity_id):
         robot = self.get_robot(entity_id)
         if robot is not None:
             disabled = not robot.ready_to_move()
             imgui.begin_disabled(disabled)
-            if imgui.menu_item_simple("Move To Pose"):
-                nursery.start_soon(robot.move_to, self.q)
+            if imgui.menu_item_simple("Move Robot To Pose"):
+                nursery.start_soon(self.move_robot, nursery)
             imgui.end_disabled()
 
     def draw_property(self, nursery, e):
-        assert esper.has_component(e, Pose)
-        imgui.separator_text("Pose")
+        assert esper.has_component(e, RobotPose)
+        imgui.separator_text("Robot Pose")
         imgui.push_style_color(imgui.Col_.button, COLORS["BLUE"])
         robot = self.get_robot(e)
-        disabled = not robot.ready_to_move()
+        disabled = robot is None or not robot.ready_to_move()
         imgui.begin_disabled(disabled)
-        if imgui.button("Move To", (imgui.get_content_region_avail().x, 40)):
-            if robot is not None:
-                nursery.start_soon(robot.move_to, esper.component_for_entity(e, Pose).q)
+        if imgui.button("Move Robot", (imgui.get_content_region_avail().x, 40)):
+            nursery.start_soon(self.move_robot, nursery)
         if disabled:
             imgui.set_item_tooltip("Robot is not ready to move")
         imgui.pop_style_color()
         imgui.end_disabled()
-
-        # c = esper.component_for_entity(e, Pose)
-        # q = c.q
-        # for i, q_i in enumerate(q):
-        #     imgui.text(f"q{i}: {q_i:.3f}")
 
     def on_selected(self, nursery, entity_id, just_selected):
         color = (*COLORS["PURPLE"][:3], 0.8)
@@ -111,7 +154,7 @@ class Pose(Component):
 
     @staticmethod
     def default_name():
-        return "Pose"
+        return "Robot Pose"
 
 
 class Selected(Component):

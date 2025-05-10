@@ -28,10 +28,18 @@ class JointMeasurement(Component):
         for i, j in enumerate(self.joint_values):
             imgui.text(f"Joint {i}: {j}")
     
+    
+    def derive_name(self):
+        if not esper.entity_exists(self.robot_id):
+            return "Joints"
+        
+        robot_node = get_node(self.robot_id)
+        return f"Joints - {robot_node.name}"
+    
     @staticmethod
     def default_name():
         return "Joints"
-    
+
     def _fix_on_load(self, new_to_old_entity_ids):
         self.robot_id = new_to_old_entity_ids[self.robot_id]
 

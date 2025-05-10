@@ -40,6 +40,13 @@ class ImageMeasurement(Component):
 
         imgui.text(f"Image Path: {self.image_path}")
 
+    def derive_name(self):
+        if not esper.entity_exists(self.camera_id):
+            return "Image"
+        
+        camera_node = get_node(self.camera_id)
+        return f"Image - {camera_node.name}"
+    
     @staticmethod
     def default_name():
         return "Image"

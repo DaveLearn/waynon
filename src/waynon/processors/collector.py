@@ -1,5 +1,6 @@
 # Copyright (c) 2025 Boston Dynamics AI Institute LLC. All rights reserved.
 
+from pathlib import Path
 from typing import Dict, List, Tuple
 import numpy as np
 
@@ -7,7 +8,7 @@ from PIL import Image
 import esper
 import trio
 
-from waynon.components.simple import Pose, Deletable
+from waynon.components.simple import Pose, Deletable, RobotPose
 from waynon.components.pose_group import PoseGroup
 from waynon.components.tree_utils import *
 from waynon.components.scene_utils import get_world_id, is_dynamic
@@ -68,7 +69,7 @@ class Collector:
         from waynon.components.scene_utils import DATA_PATH
 
         assert esper.entity_exists(collector_id) and esper.has_component(collector_id, CollectorData)
-        data = esper.component_for_entity(collector_id, CollectorData)
+        data: CollectorData = esper.component_for_entity(collector_id, CollectorData)
 
         # get our cameras
         cameras: list[tuple[int, PinholeCamera]] =  []
@@ -80,73 +81,53 @@ class Collector:
                 return
             cameras.append((entity, c))
 
-        # and our robots ids and their posegroup and pose ids
-        max_pose_count = 1
-        robots: Dict[int, List[tuple[int, int]]] = {}
-        for entity_id, c in esper.get_component(Robot):
-            robot_manager = c.get_manager()
-            if robot_manager is None:
-                print(f"Robot {entity_id} has no manager")
-                return
-            if robot_manager and not robot_manager.ready_to_move():
-                print("Robot not ready to move")
-                return
-            pose_groups = find_descendants_with_component(entity_id, PoseGroup)
+        pose_group_ids = find_descendants_with_component(get_world_id(), PoseGroup)
+        pose_group_ids = [p for p in pose_group_ids if p not in data.group_blacklist]
 
-            poses = []
-            for pose_group_id in pose_groups:
-                pose_ids = find_descendants_with_component(pose_group_id, Pose)
-                poses.extend([(pose_group_id, pose_id) for pose_id in pose_ids])
-            
-            robots[entity_id] = poses
-            if len(poses) > max_pose_count:
-                max_pose_count = len(poses)
+        # build a sequence of (pose_id, pose_group_id)
+        poses: List[Tuple[int, int]] = []
+        for pose_group_id in pose_group_ids:
+            pose_ids = find_children_with_component(pose_group_id, Pose)
+            for pose_id in pose_ids:
+                poses.append((pose_id, pose_group_id))
+
+        # robots
+        robot_ids = find_descendants_with_component(get_world_id(), Robot)
 
         # collect the data
+        
         data_node_id = find_child_with_component(collector_id, DataNode)
         if not data_node_id:
             data_node_id, _ = create_entity("Data", collector_id, DataNode())
         data_node = esper.component_for_entity(data_node_id, Node)
 
-        new_pose_group = True  
+        
         measurement_group_id = None
-        main_robot_id = next(iter(robots.keys()), None)
         pose_group_name = "default"
-        image_dir = None
+        group_path_relative = Path(pose_group_name)
+        image_path_relative = group_path_relative / "images"
+        pose_in_group = 0
 
-        for pose_idx in range(max_pose_count):
-            # first move all the robots to their desired poses and collect joint measurements
-            joint_measurements = []
-            for robot_id, poses in robots.items():
-                robot_manager = esper.component_for_entity(robot_id, Robot).get_manager()
-                assert robot_manager is not None
+        for pose_idx in range(max(len(poses), 1)):
+
+            # first pose the scene (if poses are defined)
+            if pose_idx < len(poses):
+                pose_id, pose_group_id = poses[pose_idx]
                 
-                # if we have a pose for this robot, move to it.
-                if pose_idx < len(poses):
-                    
-                    pose_group_id = poses[pose_idx][0]
-                    pose_id = poses[pose_idx][1]
-                    pose_group_node = esper.component_for_entity(pose_group_id, Node)
+                pose_group_node = esper.component_for_entity(pose_group_id, Node)
+                if pose_group_name != pose_group_node.name:
+                    measurement_group_id = None # stop writing to the current group
+                    pose_in_group = 0
+                    pose_group_name = pose_group_node.name
+                
+                pose: Pose = esper.component_for_entity(pose_id, Pose)
+                await pose.move_to_pose(None, pose_id)
 
-                    # only use name based on first robot
-                    if robot_id == main_robot_id:
-                        if pose_group_name != pose_group_node.name:
-                            new_pose_group = True
-                            pose_group_name = pose_group_node.name
-
-                    # we need to move to the pose
-                    pose = esper.component_for_entity(pose_id, Pose)
-                    q = pose.q
-                    print(f"Moving robot {esper.component_for_entity(robot_id, Node).name} to {q}")
-                    await robot_manager.move_to(q)
-                    await trio.sleep(0.3)
-
-                # regardless of movement,  we read the current joint values
-                q = robot_manager.read_q().tolist()
-                joint_measurements.append(JointMeasurement(robot_id=robot_id, joint_values=q))
+            pose_in_group += 1
 
             # determine the measurement group for this pose
-            if new_pose_group:
+            if measurement_group_id is None:
+                # create a new one using pose_group_name as the name, deleting any existing measurement groups
                 for child_node in data_node.children:
                     if child_node.name == pose_group_name:
                         measurement_group_id = child_node.entity_id
@@ -155,31 +136,36 @@ class Collector:
                 measurement_group_id, _ = create_entity(pose_group_name, data_node_id, MeasurementGroup(), Deletable())
 
                 # make directories
-                group_path = DATA_PATH / f"{pose_group_name}"
-                group_path.mkdir(exist_ok=True, parents=True)
-                image_dir = group_path / "images"
-                image_dir.mkdir(exist_ok=True, parents=True)
+                group_path_relative = Path(pose_group_name)
+                (DATA_PATH / group_path_relative).mkdir(exist_ok=True, parents=True)
+                image_path_relative = group_path_relative / "images"
+                (DATA_PATH / image_path_relative).mkdir(exist_ok=True, parents=True)
+                
 
-         
-            assert image_dir is not None
-            assert measurement_group_id is not None
 
+            # collect joint measurements
+            joint_measurements = []
+            for robot_id in robot_ids:
+                robot_manager = esper.component_for_entity(robot_id, Robot).get_manager()
+                assert robot_manager is not None
+                q = robot_manager.read_q().tolist()
+                joint_measurements.append(JointMeasurement(robot_id=robot_id, joint_values=q))
+
+            # collect image measurements
             image_measurements = []
-            for k, (cam_id, cam) in enumerate(cameras):
+            for cam_id, cam in cameras:
                 # each one of these is one measurement
                 camera_node = get_node(cam_id)
                 image = cam.get_image_u()
                 if image is None:
                     print(f"Camera {cam_id} has no image")
                     continue
-
-                print(f"Saving image for {cam_id}")
-                image_name = f"{camera_node.name}_{pose_idx}.png"
-
-                image_path = image_dir / image_name
+                
+                image_name = f"{camera_node.name}_{pose_in_group}.png"
+                image_path = image_path_relative / image_name
                 image = Image.fromarray(image)
                 await trio.to_thread.run_sync(
-                    image.save, image_path # This takes a while
+                    image.save, DATA_PATH / image_path # This takes a while
                 )
 
                 image_measurement = ImageMeasurement(
@@ -189,11 +175,11 @@ class Collector:
                 image_measurements.append(image_measurement)
                 await trio.sleep(0.0) # give back control to the event loop
 
-            measurement_name = f"Pose {pose_idx}"
+            measurement_name = f"Pose {pose_in_group}"
             create_measurement(measurement_name, measurement_group_id, *joint_measurements, *image_measurements)
             await trio.sleep(0.0) # give back control to the event loop
 
-
+"""
     async def collect2(self, collector_id: int):
         from waynon.components.scene_utils import create_measurement
         from waynon.components.scene_utils import DATA_PATH
@@ -277,4 +263,4 @@ class Collector:
                                     joint_measurement,
                                     image_measurement)
                     await trio.sleep(0.0) # give back control to the event loop
-
+"""
