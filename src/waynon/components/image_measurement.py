@@ -13,6 +13,20 @@ from .node import Node
 from .pose_group import PoseGroup
 from .tree_utils import *
 
+def activate_image_measurement(image_measurement_id):
+
+    # Set the image on the camera
+    image_measurement = esper.component_for_entity(
+        image_measurement_id, ImageMeasurement
+    )
+    camera_entity_id = image_measurement.camera_id
+    if esper.entity_exists(camera_entity_id):
+        # set its texture
+        camera = esper.try_component(camera_entity_id, PinholeCamera)
+        if camera:
+            camera.update_image(image_measurement.get_image_u())
+
+
 
 class ImageMeasurement(Component):
     camera_id: int
@@ -46,6 +60,12 @@ class ImageMeasurement(Component):
         
         camera_node = get_node(self.camera_id)
         return f"Image - {camera_node.name}"
+
+    def on_selected(self, nursery: trio.Nursery, entity_id: int, just_selected: bool):
+        if just_selected:
+            # Display the image
+            esper.dispatch_event("image_viewer", entity_id)
+            activate_image_measurement(entity_id)
     
     @staticmethod
     def default_name():

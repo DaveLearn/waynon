@@ -16,6 +16,17 @@ from .camera import PinholeCamera
 from .measurement import Measurement
 
 
+def activate_joint_measurement(joint_measurement_id):
+    from .robot import Robot
+    joint_measurement = esper.component_for_entity(joint_measurement_id, JointMeasurement)
+                
+    robot = esper.try_component(joint_measurement.robot_id, Robot)
+    if robot:
+        manager = robot.get_manager()
+        if manager:
+            manager.set_offline_q(np.asarray(joint_measurement.joint_values))
+
+
 class JointMeasurement(Component):
     robot_id: int
     joint_values: list[float]
@@ -36,6 +47,12 @@ class JointMeasurement(Component):
         robot_node = get_node(self.robot_id)
         return f"Joints - {robot_node.name}"
     
+
+    def on_selected(self, nursery: trio.Nursery, entity_id: int, just_selected: bool):
+        if just_selected:
+            activate_joint_measurement(entity_id)
+
+
     @staticmethod
     def default_name():
         return "Joints"

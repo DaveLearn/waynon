@@ -26,40 +26,39 @@ class CharucoBoardProcessor(MeasurementProcessor):
         assert esper.has_component(detector_id, CharucoBoardDetector)
         assert esper.has_component(measurement_id, Measurement)
 
-        iid = find_child_with_component(measurement_id, ImageMeasurement)
-        assert iid is not None, "Measurement must have an ImageMeasurement"
+        image_measurements = find_children_with_component(measurement_id, ImageMeasurement)
+        for iid in image_measurements:
+            delete_children(iid, lambda id, c: isinstance(c, CharucoBoardMeasurement))
 
-        delete_children(iid, lambda id, c: isinstance(c, CharucoBoardMeasurement))
+            image_measurement = esper.component_for_entity(iid, ImageMeasurement)
 
-        image_measurement = esper.component_for_entity(iid, ImageMeasurement)
+            image = image_measurement.get_image_u()
+            all_boards = esper.get_component(CharucoBoard)
+            if len(all_boards) == 0:
+                print("Warning: No CharucoBoards in system")
+                return
 
-        image = image_measurement.get_image_u()
-        all_boards = esper.get_component(CharucoBoard)
-        if len(all_boards) == 0:
-            print("Warning: No CharucoBoards in system")
-            return
-
-        for board_entity_id, board in all_boards:
-            res = await trio.to_thread.run_sync(
-                detect_charuco_board, 
-                image, 
-                board.get_board(),
-            )
-            
-            if res:
-                corner_ids, corner_pixels, marker_ids, marker_corners = res
+            for board_entity_id, board in all_boards:
+                res = await trio.to_thread.run_sync(
+                    detect_charuco_board, 
+                    image, 
+                    board.get_board(),
+                )
                 
-                if corner_ids is not None and len(corner_ids) > 0:
-                    charuco_measurement = CharucoBoardMeasurement(
-                        camera_entity_id=image_measurement.camera_id,
-                        board_entity_id=board_entity_id,
-                        detector_entity_id=detector_id,
-                        corner_ids=corner_ids.tolist(),
-                        corner_pixels=corner_pixels.tolist(),
-                        marker_ids=marker_ids.tolist(),
-                        marker_corners=marker_corners.tolist()
-                    )
-                    create_entity(f"Charuco Board Detection", iid, charuco_measurement, Deletable())
+                if res:
+                    corner_ids, corner_pixels, marker_ids, marker_corners = res
+                    
+                    if corner_ids is not None and len(corner_ids) > 0:
+                        charuco_measurement = CharucoBoardMeasurement(
+                            camera_entity_id=image_measurement.camera_id,
+                            board_entity_id=board_entity_id,
+                            detector_entity_id=detector_id,
+                            corner_ids=corner_ids.tolist(),
+                            corner_pixels=corner_pixels.tolist(),
+                            marker_ids=marker_ids.tolist(),
+                            marker_corners=marker_corners.tolist()
+                        )
+                        create_entity(f"Charuco Board Detection", iid, charuco_measurement, Deletable())
 
 
 def detect_charuco_board(
