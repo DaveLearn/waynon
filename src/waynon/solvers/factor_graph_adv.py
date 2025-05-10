@@ -224,6 +224,9 @@ class FactorGraphSolver:
                 focal_length=(fl_x, fl_y), principal_point=(cx, cy)
             )
 
+            #optimized_keys_to_entity_id[camera_keys.K] = camera_id
+
+
         # get transforme chain camera
         transform_chain = get_tranform_chain(camera_id, max_length=3, measurement_id=measurement_id)
         for i, (pose, optimize_entity_id, is_dynamic) in enumerate(transform_chain, 1):
@@ -459,11 +462,19 @@ class FactorGraphSolver:
         if result.status == Optimizer.Status.SUCCESS:
             optimized_values = result.optimized_values
             for key, entity_id in optimized_keys_to_entity_id.items():
-                pose = from_sym_pose(optimized_values[key])
-                #if esper.has_component(entity_id, PinholeCamera):
-                #    pose = rotate_around_x(pose)
-                transform = esper.component_for_entity(entity_id, Transform)
-                transform.set_X_PT(pose)
+                if key.startswith("K_"):
+                    cam_k = optimized_values[key]
+                    camera = esper.component_for_entity(entity_id, PinholeCamera)
+                    camera.cx = cam_k.principal_point()[0]
+                    camera.cy = cam_k.principal_point()[1]
+                    camera.fl_x = cam_k.focal_length()[0]
+                    camera.fl_y = cam_k.focal_length()[1]
+                else:
+                    pose = from_sym_pose(optimized_values[key])
+                    #if esper.has_component(entity_id, PinholeCamera):
+                    #    pose = rotate_around_x(pose)
+                    transform = esper.component_for_entity(entity_id, Transform)
+                    transform.set_X_PT(pose)
         else:
             print("Optimization failed")
 

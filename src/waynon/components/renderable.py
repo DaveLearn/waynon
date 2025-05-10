@@ -1,5 +1,6 @@
 # Copyright (c) 2025 Boston Dynamics AI Institute LLC. All rights reserved.
 
+from typing import Tuple
 from PIL import Image
 import marsoom.camera_wireframe
 import marsoom.image_quad
@@ -167,14 +168,19 @@ class CharucoDrawable(Component, Drawable):
     cols: int = 4
     rows: int = 5
 
-    def model_post_init(self, __context):
+    def get_corners(self) -> Tuple[Tuple[float, float, float], Tuple[float, float, float], Tuple[float, float, float], Tuple[float, float, float]]:
         board_width = float(self.cols) * self.square_length
         board_height = float(self.rows) * self.square_length
 
-        top_left = (-board_width / 2, board_height / 2, 0)
-        top_right = (board_width / 2, board_height / 2, 0)
-        bot_right = (board_width / 2, -board_height / 2, 0)
-        bot_left = (-board_width / 2, -board_height / 2, 0)
+        top_left = (0, 0, 0)
+        top_right = (board_width, 0, 0)
+        bot_right = (board_width, board_height, 0)
+        bot_left = (0, board_height, 0)
+
+        return top_left, top_right, bot_right, bot_left
+
+    def model_post_init(self, __context):
+        top_left, top_right, bot_right, bot_left = self.get_corners()
 
         self._batch = pyglet.graphics.Batch()
         self._texture_id = CHARUCO_TEXTURES.get_texture(
@@ -196,13 +202,7 @@ class CharucoDrawable(Component, Drawable):
         )
 
     def _update_model(self):
-        board_width = float(self.cols) * self.square_length
-        board_height = float(self.rows) * self.square_length
-
-        top_left = (-board_width / 2, board_height / 2, 0)
-        top_right = (board_width / 2, board_height / 2, 0)
-        bot_right = (board_width / 2, -board_height / 2, 0)
-        bot_left = (-board_width / 2, -board_height / 2, 0)
+        top_left, top_right, bot_right, bot_left = self.get_corners()
 
         self._texture_id = CHARUCO_TEXTURES.get_texture(
             aruco_dict=self.aruco_dict, 

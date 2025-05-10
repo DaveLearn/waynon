@@ -16,10 +16,10 @@ from waynon.processors.realsense_manager import RealsenseManager
 
 class PinholeCamera(Component):
     # intrinsics
-    fl_x: float = 500.0
-    fl_y: float = 500.0
-    cx: float = 640.0
-    cy: float = 360.0
+    fl_x: float = 635.0
+    fl_y: float = 635.0
+    cx: float = 630.0
+    cy: float = 370.0
 
     # resolution
     width: int = 1280
@@ -133,12 +133,14 @@ class PinholeCamera(Component):
 
     def draw_property(self, nursery, e: int):
         imgui.separator_text("Pinhole Camera")
+        imgui.push_id("camera_properties")
         _, self.width = imgui.input_int("Width", self.width)
         _, self.height = imgui.input_int("Height", self.height)
         _, self.fl_x = imgui.input_float("Focal X", self.fl_x)
         _, self.fl_y = imgui.input_float("Focal Y", self.fl_y)
         _, self.cx = imgui.input_float("Principal X", self.cx)
         _, self.cy = imgui.input_float("Principal Y", self.cy)
+        imgui.pop_id()
 
         imgui.spacing()
 
