@@ -407,9 +407,15 @@ class FactorGraphSolver:
         assert esper.has_component(factor_graph_id, FactorGraph)
         factor_graph = esper.component_for_entity(factor_graph_id, FactorGraph)
         const_keys = ConstKeys()
+
+        from scipy.spatial.transform import Rotation as R
+        rot_x = R.from_rotvec([np.pi, 0, 0]).as_matrix()
+        X_x = np.eye(4)
+        X_x[:3, :3] = rot_x
+
         initial_values = Values({
             const_keys.epsilon: sf.numeric_epsilon,
-            const_keys.X_CV_C: to_sym_pose(rotate_around_x(np.eye(4))),
+            const_keys.X_CV_C: to_sym_pose(X_x),
         })
 
         optimized_keys_to_entity_id = {}
