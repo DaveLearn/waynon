@@ -19,7 +19,7 @@ class FactorGraph(Component):
     verbose: bool = False
 
     def get_manager(self):
-        from waynon.solvers.factor_graph import FACTOR_GRAPH_SOLVER
+        from waynon.solvers.factor_graph_adv import FACTOR_GRAPH_SOLVER
 
         return FACTOR_GRAPH_SOLVER
 
