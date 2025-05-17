@@ -62,8 +62,10 @@ class CharucoBoard(Component):
 
     def get_P_MC(self) -> np.ndarray:
         board = self.get_board()
-        corners = board.getChessboardCorners()
-        return np.array(corners, dtype=np.float64)
+        corners = np.array(board.getChessboardCorners())
+        # we are right hand rule so origin would be bottom left of page, but board corners are from top left of page so we need to flip y 
+        corners[:, 1] = -corners[:, 1]
+        return corners
 
     @staticmethod
     def default_name():

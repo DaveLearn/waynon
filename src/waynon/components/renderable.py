@@ -174,8 +174,8 @@ class CharucoDrawable(Component, Drawable):
 
         top_left = (0, 0, 0)
         top_right = (board_width, 0, 0)
-        bot_right = (board_width, board_height, 0)
-        bot_left = (0, board_height, 0)
+        bot_right = (board_width, -board_height, 0)
+        bot_left = (0,-board_height, 0)
 
         return top_left, top_right, bot_right, bot_left
 
