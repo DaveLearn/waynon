@@ -23,7 +23,8 @@ class World(Component):
                                                    create_realsense_camera,
                                                    create_robot,
                                                    create_charuco_board, 
-                                                   create_pinhole_camera)
+                                                   create_pinhole_camera,
+                                                   create_posegroup)
 
         if imgui.menu_item_simple(f"{ICON_FA_ROBOT} Add Franka Robot"):
             create_robot(entity_id)
@@ -35,6 +36,8 @@ class World(Component):
             create_aruco_marker(entity_id)
         if imgui.menu_item_simple(f"{ICON_FA_CHESS_BOARD} Add Charuco Board"):
             create_charuco_board(entity_id)
+        if imgui.menu_item_simple(f"{ICON_FA_PLUS} Add Pose Group"):
+            create_posegroup()
 
 class Visiblity(Component):
     enabled: bool = True

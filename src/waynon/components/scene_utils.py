@@ -166,7 +166,7 @@ def create_robot(parent_id: int = None, name: str = None):
         Draggable(type="transform"),
         Nestable(type="transform", target=True, source=False),
     )
-    id, _ = create_entity("Poses", rd, PoseFolder())
+    #id, _ = create_entity("Poses", rd, PoseFolder())
     lid, _ = create_entity("Links", rd, FrankaLinks())
 
     link_to_mesh_name = {
@@ -217,7 +217,7 @@ def create_posegroup(name: str = None):
             break
     
     if pose_groups_id is None:
-        pose_groups_id, _ = create_entity("PoseGroups", world_id, Node())
+        pose_groups_id, _ = create_entity("PoseGroups", world_id, Node(), PoseFolder())
     
     return create_entity(
         name, pose_groups_id, PoseGroup(), Draggable(type="posegroup"), Deletable()
