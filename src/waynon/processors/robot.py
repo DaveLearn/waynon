@@ -80,7 +80,7 @@ class FrankaManager(RobotManager):
         ip: str,
         username: str,
         password: str,
-        platform: str = "fr3",
+        platform: str = "panda",
     ):
         try:
             self.desk = Desk(ip, platform)
@@ -101,9 +101,9 @@ class FrankaManager(RobotManager):
 
         self.connect_status = FrankaManager.ConnectionStatus.CONNECTED
 
-        nursery.start_soon(self._read_brake_status)
+        #nursery.start_soon(self._read_brake_status)
         # nursery.start_soon(self._read_joint_status)
-        nursery.start_soon(self._read_mode)
+        # nursery.start_soon(self._read_mode)
         nursery.start_soon(self._read_buttons)
 
     async def disconnect(self):
