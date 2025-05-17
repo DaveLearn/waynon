@@ -19,7 +19,6 @@ dependencies = [
     "anytree",
     "pillow",
     "symforce",
-
     "trio-websocket@git+https://github.com/jc211/trio-websocket",
     "marsoom @ git+https://github.com/jc211/marsoom#b94f9d87303a6a49daafa50b434b6bf855f038e8",
     "panda-python@git+https://github.com/jc211/panda-py#b1f923c9fbce3c82aaffb13d2e3b1efd9b6403be",
@@ -35,20 +34,24 @@ requires = ["hatchling"]
 allow-direct-references = true
 
 [tool.pixi.project]
-channels = ["jc211", "conda-forge"]
+channels = ["jc211", "davelearn", "conda-forge"]
 platforms = ["linux-64"]
 
 [tool.pixi.pypi-dependencies]
 waynon = { path = ".", editable = true }
+
+#[tool.pixi.pypi-options]
+#no-build-isolation = ["imgui-bundle"]
 
 [tool.pixi.tasks]
 start = { cmd = "python src/waynon/main.py" }
 
 [tool.pixi.dependencies]
 eigen = "*"
-libfranka = "*"
+libfranka = { version = "=0.9.2", channel = "davelearn" }
 pinocchio = "*"
 pyrealsense2 = "*"
-pip = "*"
+pip = ">=25.1.1,<26"
 ruckig = {version = "*", channel="jc211"}
-cmake = "<4.0.0"
+cmake = ">3.26.1,<4.0.0"
+#scikit-build-core = "*"
