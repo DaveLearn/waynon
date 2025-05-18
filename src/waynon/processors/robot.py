@@ -218,7 +218,7 @@ class FrankaManager(RobotManager):
     def ready_to_move(self) -> bool:
         return (
             self.connect_status == FrankaManager.ConnectionStatus.CONNECTED
-            and self.brake_status == FrankaManager.BrakeStatus.OPEN
+           # and self.brake_status == FrankaManager.BrakeStatus.OPEN
         )
 
     async def home(self):
@@ -228,7 +228,7 @@ class FrankaManager(RobotManager):
 
     async def move_to(self, q: np.ndarray):
         assert self.connect_status == FrankaManager.ConnectionStatus.CONNECTED
-        await self.panda.movej(q)
+        await self.panda.movej(q, speed=0.1)
 
     def _initialize_buttons(self):
         self.buttons_down = {
