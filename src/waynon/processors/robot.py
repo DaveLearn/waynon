@@ -228,7 +228,7 @@ class FrankaManager(RobotManager):
 
     async def move_to(self, q: np.ndarray):
         assert self.connect_status == FrankaManager.ConnectionStatus.CONNECTED
-        await self.panda.movej(q, speed=0.1)
+        await self.panda.movej(q, speed=0.8)
 
     def _initialize_buttons(self):
         self.buttons_down = {

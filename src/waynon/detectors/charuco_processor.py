@@ -83,6 +83,9 @@ def detect_charuco_board(
     if marker_ids is None or len(marker_ids) == 0:
         return None
     
+    if charuco_ids is None or len(charuco_ids) == 0:
+        return None
+
     return np.array(charuco_ids).squeeze(1), np.array(charuco_corners).squeeze(1), np.array(marker_ids).squeeze(1), np.array(marker_corners).squeeze(1)
 
 
