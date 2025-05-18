@@ -216,8 +216,14 @@ async def main_async():
         async for _ in periodic(1/60):
             if window.should_exit():
                 break
-            esper.process()
-            window.step()
+            try:
+                esper.process()
+                window.step()
+            except Exception as e:
+                # return exception and stack trace
+                import traceback
+                print(f"Exception in render loop {e} {traceback.format_exc()}")
+                break
 
     async with trio.open_nursery() as nursery:
         window = Window(nursery, settings=settings)

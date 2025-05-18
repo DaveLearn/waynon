@@ -7,9 +7,10 @@ from typing import Dict, List, Optional, Tuple
 import esper
 import numpy as np
 import symforce
+symforce.set_epsilon_to_symbol()
 
 from waynon.components.optimizable import Optimizable
-symforce.set_epsilon_to_symbol()
+
 import sym
 import sym.ops
 import symforce.opt
@@ -152,6 +153,7 @@ def get_tranform_chain(entity_id: int, max_length: int, measurement_id: int) -> 
 
 
     last_was_constant = False
+    dynamic = False
 
     for entity_id in transform_list:
         
@@ -173,7 +175,7 @@ def get_tranform_chain(entity_id: int, max_length: int, measurement_id: int) -> 
             dynamic = True
         else:
             this_pose = to_sym_pose(esper.component_for_entity(entity_id, Transform).get_X_PT())
-            dynamic = False
+            # this link isn't dynamic but we need to remember if previous links in tranform chain were.
 
         want_optimize = False
         if esper.has_component(entity_id, Optimizable):
@@ -230,6 +232,7 @@ class FactorGraphSolver:
         # get transforme chain camera
         transform_chain = get_tranform_chain(camera_id, max_length=3, measurement_id=measurement_id)
         for i, (pose, optimize_entity_id, is_dynamic) in enumerate(transform_chain, 1):
+            print(f"camera {camera_id} measurement {measurement_id} optimize_entity {optimize_entity_id} is_dynamic {is_dynamic}")
             camera_keys.set_measurement_id(i, measurement_id if is_dynamic else None)
             if not camera_keys.X_WC(i) in values:
                 values[camera_keys.X_WC(i)] = pose

@@ -31,6 +31,7 @@ class PropertyViewModel:
 
 
 def _dispatch_draw(entitiy_id: int, nursery: trio.Nursery):
+    imgui.text(f"Id: {entitiy_id}")
     components: list[Component] = list(esper.components_for_entity(entitiy_id))
     components.sort(key=lambda x: x.property_order())
     for component in components:

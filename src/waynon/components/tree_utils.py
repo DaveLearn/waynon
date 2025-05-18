@@ -36,7 +36,7 @@ def find_descendant_with_component(
     node = get_node(entity_id)
     for child in node.descendants:
         if esper.has_component(child.entity_id, component_type):
-            component = esper.component_for_entity(child.entity_id, component)
+            component = esper.component_for_entity(child.entity_id, component_type)
             if predicate is None or predicate(child.entity_id, component):
                 return child.entity_id
     return None

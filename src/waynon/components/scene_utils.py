@@ -159,10 +159,11 @@ def create_robot(parent_id: int = None, name: str = None):
     rd, node = create_entity(
         name,
         parent_id,
-        Transform(modifiable=False),
+        Transform(modifiable=True),
         Franka(),
         Robot(),
         Deletable(),
+        Optimizable(optimize=True, use_in_optimization=True),
         Draggable(type="transform"),
         Nestable(type="transform", target=True, source=False),
     )
