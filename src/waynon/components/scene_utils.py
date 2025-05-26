@@ -472,16 +472,22 @@ def rotate_around_x(X_BC_blender: np.ndarray) -> np.ndarray:
     return X_BC_blender @ X_x
 
 def export_calibration(path: Path):
+    from waynon.components.node import Node
     from waynon.components.camera import PinholeCamera 
     from waynon.components.transform import Transform
     from waynon.components.realsense_camera import RealsenseCamera
 
     res = {}
-    for entity_id, (camera, transform, rs) in esper.get_components(PinholeCamera, Transform, RealsenseCamera): #TODO, shouldnt need RealseCamera
+    for entity_id, (camera, transform, rs, node) in esper.get_components(PinholeCamera, Transform, RealsenseCamera, Node): #TODO, shouldnt need RealseCamera
         serial = rs.serial
         transform = transform.get_X_WT()
         res[serial] = {
             "X_WT": transform.tolist(),
+            "K": camera.K().tolist(),
+            "width": camera.width,
+            "height": camera.height,
+            "name": node.name,
+            "id": entity_id,
         }
     
     with open(path, "w") as f:
